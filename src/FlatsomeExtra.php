@@ -1,6 +1,8 @@
 <?php
 namespace Optilarity\FlatsomeExtra;
 
+use Optilarity\FlatsomeExtra\Shortcodes\DataLayoutShortcode;
+
 class FlatsomeExtra
 {
     public function __construct()
@@ -10,15 +12,43 @@ class FlatsomeExtra
 
     public function init()
     {
-        $this->registerPostType();
+        // Boot Jankx Data Layout
+        \Jankx\DataLayout\Loader::boot();
+
+        add_action('init', [$this, 'registerPostType']);
 
         add_filter('template_include', [$this, 'templateInclude']);
         add_action('wp_enqueue_scripts', [$this, 'enqueueAssets']);
         add_action('admin_bar_menu', [$this, 'addAdminBarItem'], 100);
         add_action('admin_init', [$this, 'handleLayoutEditRequest']);
+
+        $this->registerShortcodes();
     }
 
-    protected function registerPostType()
+    protected function registerShortcodes()
+    {
+        $shortcodes = [
+            DataLayoutShortcode::class,
+        ];
+
+        foreach ($shortcodes as $shortcodeClass) {
+            $shortcode = new $shortcodeClass();
+            $shortcode->register();
+        }
+
+        // Ensure UX Builder elements are registered correctly
+        add_action('ux_builder_setup', [$this, 'registerUXBuilderElements']);
+    }
+
+    public function registerUXBuilderElements()
+    {
+        if (function_exists('add_ux_builder_shortcode')) {
+            // The elements are already registered via the Shortcode classes, 
+            // but we can add more system-wide registration here if needed.
+        }
+    }
+
+    public function registerPostType()
     {
         register_post_type('optilarity_layout', [
             'labels' => [
@@ -38,13 +68,11 @@ class FlatsomeExtra
             'has_archive' => false,
         ]);
 
-        // Flush rewrite rules to prevent 404 in UX Builder
         if (get_option('optilarity_layout_flushed') !== '1') {
             flush_rewrite_rules();
             update_option('optilarity_layout_flushed', '1');
         }
 
-        // Enable UX Builder for this post type
         if (function_exists('add_ux_builder_post_type')) {
             add_ux_builder_post_type('optilarity_layout');
         }
@@ -52,19 +80,17 @@ class FlatsomeExtra
 
     public function enqueueAssets()
     {
-        if (is_tax('thought_leader')) {
-            wp_enqueue_style(
-                'flatsome-extra-thought-leader',
-                $this->getAssetUrl('css/optilarity-flatsome-extra.css'),
-                [],
-                '1.0.0'
-            );
-        }
+        wp_enqueue_style(
+            'flatsome-extra-styles',
+            $this->getAssetUrl('css/optilarity-flatsome-extra.css'),
+            [],
+            '1.1.0'
+        );
     }
 
     protected function getAssetUrl($path)
     {
-        return plugins_url('vendor/optilarity/flatsome-extra/assets/' . $path, dirname(__DIR__, 4) . '/akselos-customizer.php');
+        return Helper::resolveUrlFromPath(constant('OPTILITY_FLATSOME_EXTRA_PATH') . '/assets/' . $path);
     }
 
     public function addAdminBarItem($wp_admin_bar)
@@ -114,7 +140,6 @@ class FlatsomeExtra
             update_term_meta($term->term_id, '_optilarity_layout_id', $layout_id);
         }
 
-        // Redirect to UX Builder
         $ux_builder_url = admin_url('post.php?post=' . $layout_id . '&action=edit&app=uxbuilder');
         wp_redirect($ux_builder_url);
         exit;

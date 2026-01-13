@@ -4,6 +4,102 @@
 }
 
 /* Custom resource card styles if user wants to use them in UX Builder via Raw HTML or Shortcode */
+.akselos-card .card-excerpt {
+    font-size: 15px;
+    line-height: 1.6;
+    color: #444;
+}
+
+/* Responsive Grid/Carousel Columns */
+.jankx-data-layout[data-columns] .row {
+    display: flex;
+    flex-wrap: wrap;
+    margin: 0 -15px;
+}
+
+.jankx-data-layout[data-columns] .col-item,
+.jankx-data-layout[data-columns] .carousel-cell {
+    padding: 0 15px;
+    box-sizing: border-box;
+}
+
+/* Desktop */
+@media (min-width: 992px) {
+
+    .jankx-data-layout[data-columns="1"] .col-item,
+    .jankx-data-layout[data-columns="1"] .carousel-cell {
+        width: 100%;
+    }
+
+    .jankx-data-layout[data-columns="2"] .col-item,
+    .jankx-data-layout[data-columns="2"] .carousel-cell {
+        width: 50%;
+    }
+
+    .jankx-data-layout[data-columns="3"] .col-item,
+    .jankx-data-layout[data-columns="3"] .carousel-cell {
+        width: 33.333%;
+    }
+
+    .jankx-data-layout[data-columns="4"] .col-item,
+    .jankx-data-layout[data-columns="4"] .carousel-cell {
+        width: 25%;
+    }
+
+    .jankx-data-layout[data-columns="5"] .col-item,
+    .jankx-data-layout[data-columns="5"] .carousel-cell {
+        width: 20%;
+    }
+
+    .jankx-data-layout[data-columns="6"] .col-item,
+    .jankx-data-layout[data-columns="6"] .carousel-cell {
+        width: 16.666%;
+    }
+}
+
+/* Tablet */
+@media (min-width: 550px) and (max-width: 991px) {
+
+    .jankx-data-layout[data-columns-md="1"] .col-item,
+    .jankx-data-layout[data-columns-md="1"] .carousel-cell {
+        width: 100%;
+    }
+
+    .jankx-data-layout[data-columns-md="2"] .col-item,
+    .jankx-data-layout[data-columns-md="2"] .carousel-cell {
+        width: 50%;
+    }
+
+    .jankx-data-layout[data-columns-md="3"] .col-item,
+    .jankx-data-layout[data-columns-md="3"] .carousel-cell {
+        width: 33.333%;
+    }
+
+    .jankx-data-layout[data-columns-md="4"] .col-item,
+    .jankx-data-layout[data-columns-md="4"] .carousel-cell {
+        width: 25%;
+    }
+}
+
+/* Mobile */
+@media (max-width: 549px) {
+
+    .jankx-data-layout[data-columns-sm="1"] .col-item,
+    .jankx-data-layout[data-columns-sm="1"] .carousel-cell {
+        width: 100%;
+    }
+
+    .jankx-data-layout[data-columns-sm="2"] .col-item,
+    .jankx-data-layout[data-columns-sm="2"] .carousel-cell {
+        width: 50%;
+    }
+
+    .jankx-data-layout[data-columns-sm="3"] .col-item,
+    .jankx-data-layout[data-columns-sm="3"] .carousel-cell {
+        width: 33.333%;
+    }
+}
+
 .custom-resource-card {
     background: #fff;
     border-radius: 12px;
@@ -19,4 +115,5 @@
     transform: translateY(-10px);
     box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
 }
+
 /* ... other styles from before ... */
