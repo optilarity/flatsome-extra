@@ -101,6 +101,14 @@ class FlatsomeExtra
             [],
             '1.1.0'
         );
+
+        wp_enqueue_script(
+            'flatsome-extra-scripts',
+            $this->getAssetUrl('js/optilarity-flatsome-extra.js'),
+            [],
+            '1.1.0',
+            true
+        );
     }
 
     protected function getAssetUrl($path)

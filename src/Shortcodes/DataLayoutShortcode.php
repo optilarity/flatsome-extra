@@ -163,6 +163,12 @@ class DataLayoutShortcode extends AbstractShortcode
                         'heading' => 'Show Tags',
                         'default' => 'false',
                     ],
+                    'enable_video_popup' => [
+                        'type' => 'checkbox',
+                        'heading' => 'Enable Video Popup',
+                        'description' => 'If the post format is Video, clicking the item will open a video popup instead of the detail page.',
+                        'default' => 'true',
+                    ],
                 ],
             ],
         ];
@@ -245,6 +251,7 @@ class DataLayoutShortcode extends AbstractShortcode
             'taxonomy_name' => 'category',
             'show_tags' => 'false',
             'show_pagination' => 'false',
+            'enable_video_popup' => 'true',
             'template_slug' => 'woocommerce',
             'custom_template_path' => '',
         ], $normalized, $this->getTag());
