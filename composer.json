@@ -1,0 +1,19 @@
+{
+    "name": "optilarity/flatsome-extra",
+    "description": "A high-performance enhancement library and feature extension for the Flatsome WordPress Theme",
+    "type": "library",
+    "license": "MIT",
+    "autoload": {
+        "psr-4": {
+            "Optilarity\\FlatsomeExtra\\": "src/"
+        }
+    },
+    "authors": [
+        {
+            "name": "Puleeno Nguyen",
+            "email": "puleeno@gmail.com"
+        }
+    ],
+    "minimum-stability": "dev",
+    "require": {}
+}
