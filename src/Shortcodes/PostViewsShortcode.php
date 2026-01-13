@@ -29,7 +29,7 @@ class PostViewsShortcode extends AbstractShortcode
                 'default' => 'READS',
             ],
             'color' => [
-                'type' => 'color',
+                'type' => 'colorpicker',
                 'heading' => 'Color',
                 'default' => '#0066cc',
             ],

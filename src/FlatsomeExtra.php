@@ -19,7 +19,9 @@ class FlatsomeExtra
     public function init()
     {
         // Boot Jankx Data Layout
-        \Jankx\DataLayout\Loader::boot();
+        if (class_exists(\Jankx\DataLayout\Loader::class)) {
+            \Jankx\DataLayout\Loader::boot();
+        }
 
         add_action('init', [$this, 'registerPostType']);
 
@@ -29,7 +31,9 @@ class FlatsomeExtra
         add_action('admin_init', [$this, 'handleLayoutEditRequest']);
 
         $this->initTaxonomyFeaturedThumbnail();
-        $this->registerShortcodes();
+
+        // Register shortcodes on init to ensure all dependencies are loaded
+        add_action('init', [$this, 'registerShortcodes']);
     }
 
     protected function initTaxonomyFeaturedThumbnail()
@@ -38,7 +42,7 @@ class FlatsomeExtra
         TaxonomyFeaturedThumbnail::getInstance()->register($taxonomies);
     }
 
-    protected function registerShortcodes()
+    public function registerShortcodes()
     {
         $shortcodes = [
             DataLayoutShortcode::class,
