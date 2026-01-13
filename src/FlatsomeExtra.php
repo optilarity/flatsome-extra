@@ -1,7 +1,7 @@
 <?php
 namespace Optilarity\FlatsomeExtra;
 
-class Bootstrap
+class FlatsomeExtra
 {
     public function __construct()
     {

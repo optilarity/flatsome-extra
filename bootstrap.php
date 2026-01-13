@@ -3,15 +3,15 @@ class Optilarity_Flatsome_Extra_Bootstrapper
 {
     public function __construct()
     {
-        $this->boot();
     }
 
     public function boot()
     {
-        if (class_exists(\Optilarity\FlatsomeExtra\Bootstrap::class)) {
-            new \Optilarity\FlatsomeExtra\Bootstrap();
+        if (class_exists(\Optilarity\FlatsomeExtra\FlatsomeExtra::class)) {
+            new \Optilarity\FlatsomeExtra\FlatsomeExtra();
         }
     }
 }
 
-new Optilarity_Flatsome_Extra_Bootstrapper();
+$bootstraper = new Optilarity_Flatsome_Extra_Bootstrapper();
+$bootstraper->boot();
