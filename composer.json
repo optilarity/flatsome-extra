@@ -19,6 +19,7 @@
     ],
     "minimum-stability": "dev",
     "require": {
-        "jankx/data-layout": "*"
+        "jankx/data-layout": "*",
+        "jankx/simple-stats": "*"
     }
 }
