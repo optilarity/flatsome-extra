@@ -29,19 +29,22 @@ class DataLayoutShortcode extends AbstractShortcode
                 ],
             ],
             'post_type' => [
-                'conditions' => 'query_preset == "custom"',
                 'type' => 'select',
                 'heading' => 'Post Type',
                 'default' => 'post',
                 'options' => $this->getPostTypes(),
             ],
             'posts_per_page' => [
-                'conditions' => 'query_preset == "custom"',
                 'type' => 'slider',
                 'heading' => 'Posts Per Page',
                 'default' => '10',
                 'max' => '100',
                 'min' => '1',
+            ],
+            'show_pagination' => [
+                'type' => 'checkbox',
+                'heading' => 'Show Pagination',
+                'default' => 'false',
             ],
             'layout' => [
                 'type' => 'select',
@@ -200,6 +203,27 @@ class DataLayoutShortcode extends AbstractShortcode
 
     public function render($atts, $content = null): string
     {
+        // Normalize attributes (handle camelCase and responsive data from UX Builder)
+        $raw_atts = is_array($atts) ? $atts : [];
+        $normalized = [];
+
+        foreach ($raw_atts as $key => $value) {
+            // Convert camelCase to snake_case
+            $snake_key = strtolower(preg_replace('/(?<!^)[A-Z]/', '_$0', $key));
+            $normalized[$snake_key] = $value;
+
+            // Handle nested responsive data e.g. $responsive[columns][2]
+            if ($key === '$responsive' && is_array($value)) {
+                foreach ($value as $res_key => $res_values) {
+                    $snake_res_key = strtolower(preg_replace('/(?<!^)[A-Z]/', '_$0', $res_key));
+                    if (isset($res_values[1]))
+                        $normalized[$snake_res_key . '__md'] = $res_values[1];
+                    if (isset($res_values[2]))
+                        $normalized[$snake_res_key . '__sm'] = $res_values[2];
+                }
+            }
+        }
+
         $atts = shortcode_atts([
             'query_preset' => 'custom',
             'post_type' => 'post',
@@ -220,26 +244,29 @@ class DataLayoutShortcode extends AbstractShortcode
             'show_taxonomy' => 'false',
             'taxonomy_name' => 'category',
             'show_tags' => 'false',
+            'show_pagination' => 'false',
             'template_slug' => 'woocommerce',
             'custom_template_path' => '',
-        ], $atts, $this->getTag());
+        ], $normalized, $this->getTag());
 
-        foreach ($atts as $key => $value) {
+        // Process logic with separate variables to keep $atts relatively clean
+        $logic_atts = $atts;
+        foreach ($logic_atts as $key => $value) {
             if ($value === 'true')
-                $atts[$key] = true;
+                $logic_atts[$key] = true;
             if ($value === 'false')
-                $atts[$key] = false;
+                $logic_atts[$key] = false;
         }
 
         // Handle native template mapping
-        if ($atts['content_layout'] === 'native') {
-            if ($atts['template_slug'] === 'custom') {
-                $atts['template_slug'] = $atts['custom_template_path'];
+        if ($logic_atts['content_layout'] === 'native') {
+            if ($logic_atts['template_slug'] === 'custom') {
+                $logic_atts['template_slug'] = $logic_atts['custom_template_path'];
             }
         }
 
-        $query = QueryBuilder::build($atts);
+        $query = QueryBuilder::build($logic_atts);
 
-        return Renderer::render($query, $atts['layout'], $atts['content_layout'], $atts);
+        return Renderer::render($query, $logic_atts['layout'], $logic_atts['content_layout'], $logic_atts);
     }
 }

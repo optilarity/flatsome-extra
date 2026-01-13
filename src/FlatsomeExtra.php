@@ -2,6 +2,10 @@
 namespace Optilarity\FlatsomeExtra;
 
 use Optilarity\FlatsomeExtra\Shortcodes\DataLayoutShortcode;
+use Optilarity\FlatsomeExtra\Shortcodes\QueriedObjectTitleShortcode;
+use Optilarity\FlatsomeExtra\Shortcodes\TaxonomyDescriptionShortcode;
+use Optilarity\FlatsomeExtra\Shortcodes\PostExcerptShortcode;
+use Optilarity\FlatsomeExtra\Shortcodes\TaxonomyThumbnailShortcode;
 
 class FlatsomeExtra
 {
@@ -22,13 +26,24 @@ class FlatsomeExtra
         add_action('admin_bar_menu', [$this, 'addAdminBarItem'], 100);
         add_action('admin_init', [$this, 'handleLayoutEditRequest']);
 
+        $this->initTaxonomyFeaturedThumbnail();
         $this->registerShortcodes();
+    }
+
+    protected function initTaxonomyFeaturedThumbnail()
+    {
+        $taxonomies = apply_filters('optilarity_featured_thumbnail_taxonomies', ['category', 'post_tag', 'product_cat']);
+        TaxonomyFeaturedThumbnail::getInstance()->register($taxonomies);
     }
 
     protected function registerShortcodes()
     {
         $shortcodes = [
             DataLayoutShortcode::class,
+            QueriedObjectTitleShortcode::class,
+            TaxonomyDescriptionShortcode::class,
+            PostExcerptShortcode::class,
+            TaxonomyThumbnailShortcode::class,
         ];
 
         foreach ($shortcodes as $shortcodeClass) {

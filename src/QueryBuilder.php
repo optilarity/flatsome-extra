@@ -23,19 +23,29 @@ class QueryBuilder
                 'post_type' => $atts['post_type'] ?? 'post',
                 'posts_per_page' => $atts['posts_per_page'] ?? 4,
                 'post_status' => 'publish',
+                'post__not_in' => [$_GET['post'] ?? get_the_ID()], // Exclude current layout post
             ];
 
             // Try to be smart: if we are editing a layout for a term, try to find relevant posts.
             $post_id = $_GET['post'] ?? get_the_ID();
             if ($post_id && get_post_type($post_id) === 'optilarity_layout') {
                 $layout_post = get_post($post_id);
-                // If the user hasn't manually set a post_type, try to detect it from the layout title
-                if (empty($atts['post_type']) || $atts['post_type'] === 'post') {
-                    if (preg_match('/\((.+)\)$/', $layout_post->post_title, $matches)) {
-                        $taxonomy = $matches[1];
-                        if (taxonomy_exists($taxonomy)) {
+                if (preg_match('/\((.+)\)$/', $layout_post->post_title, $matches)) {
+                    $taxonomy = $matches[1];
+                    if (taxonomy_exists($taxonomy)) {
+                        // If user hasn't override post_type, auto-detect from tax
+                        if (empty($atts['post_type']) || $atts['post_type'] === 'post') {
                             $sample_args['post_type'] = static::getPostTypeByTaxonomy($taxonomy);
                         }
+
+                        // Apply tax query to show relevant items for this taxonomy
+                        $sample_args['tax_query'] = [
+                            [
+                                'taxonomy' => $taxonomy,
+                                'field' => 'term_id',
+                                'terms' => static::getSampleTermId($taxonomy),
+                            ],
+                        ];
                     }
                 }
             }
@@ -47,6 +57,7 @@ class QueryBuilder
             'post_type' => $atts['post_type'] ?? 'post',
             'posts_per_page' => $atts['posts_per_page'] ?? 10,
             'post_status' => 'publish',
+            'paged' => get_query_var('paged') ? get_query_var('paged') : ($atts['paged'] ?? 1),
         ];
 
         // Handle Taxonomy query if provided in atts
@@ -72,5 +83,22 @@ class QueryBuilder
             return $tax->object_type[0];
         }
         return 'post';
+    }
+
+    protected static function getSampleTermId(string $taxonomy): int
+    {
+        $terms = get_terms([
+            'taxonomy' => $taxonomy,
+            'number' => 1,
+            'orderby' => 'count',
+            'order' => 'DESC',
+            'hide_empty' => true,
+        ]);
+
+        if (!empty($terms) && !is_wp_error($terms)) {
+            return $terms[0]->term_id;
+        }
+
+        return 0;
     }
 }
