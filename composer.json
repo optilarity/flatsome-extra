@@ -6,7 +6,10 @@
     "autoload": {
         "psr-4": {
             "Optilarity\\FlatsomeExtra\\": "src/"
-        }
+        },
+        "files": [
+            "./bootstrap.php"
+        ]
     },
     "authors": [
         {
