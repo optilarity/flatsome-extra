@@ -1,0 +1,22 @@
+.optilarity-layout-content {
+    background-color: #f8f9fa;
+    padding-bottom: 80px;
+}
+
+/* Custom resource card styles if user wants to use them in UX Builder via Raw HTML or Shortcode */
+.custom-resource-card {
+    background: #fff;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.05);
+    transition: all 0.3s ease;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+}
+
+.custom-resource-card:hover {
+    transform: translateY(-10px);
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+}
+/* ... other styles from before ... */
