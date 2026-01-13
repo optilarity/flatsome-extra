@@ -7,6 +7,8 @@ use Optilarity\FlatsomeExtra\Shortcodes\TaxonomyDescriptionShortcode;
 use Optilarity\FlatsomeExtra\Shortcodes\PostExcerptShortcode;
 use Optilarity\FlatsomeExtra\Shortcodes\TaxonomyThumbnailShortcode;
 
+use Optilarity\FlatsomeExtra\Shortcodes\PostViewsShortcode;
+
 class FlatsomeExtra
 {
     public function __construct()
@@ -44,6 +46,7 @@ class FlatsomeExtra
             TaxonomyDescriptionShortcode::class,
             PostExcerptShortcode::class,
             TaxonomyThumbnailShortcode::class,
+            PostViewsShortcode::class,
         ];
 
         foreach ($shortcodes as $shortcodeClass) {
