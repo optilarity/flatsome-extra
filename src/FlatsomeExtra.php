@@ -32,13 +32,18 @@ class FlatsomeExtra
 
         $this->initTaxonomyFeaturedThumbnail();
 
-        // Register shortcodes on init to ensure all dependencies are loaded
         add_action('init', [$this, 'registerShortcodes']);
+
+        // Register page templates for layout post types
+        add_action('init', [$this, 'registerTemplates'], 30);
     }
 
     protected function initTaxonomyFeaturedThumbnail()
     {
-        $taxonomies = apply_filters('optilarity_featured_thumbnail_taxonomies', ['category', 'post_tag', 'product_cat']);
+        $taxonomies = apply_filters(
+            'optilarity_featured_thumbnail_taxonomies',
+            ['category', 'post_tag', 'product_cat']
+        );
         TaxonomyFeaturedThumbnail::getInstance()->register($taxonomies);
     }
 
@@ -70,25 +75,42 @@ class FlatsomeExtra
         }
     }
 
+    public function getLayoutPostTypes()
+    {
+        return apply_filters('optilarity/page_template/post_types', ['optilarity_layout']);
+    }
+
     public function registerPostType()
     {
-        register_post_type('optilarity_layout', [
-            'labels' => [
-                'name' => 'Optilarity Layouts',
-                'singular_name' => 'Optilarity Layout',
-            ],
-            'public' => true,
-            'show_ui' => true,
-            'capability_type' => 'page',
-            'hierarchical' => false,
-            'supports' => ['title', 'editor', 'revisions', 'thumbnail'],
-            'show_in_menu' => 'options-general.php',
-            'exclude_from_search' => true,
-            'show_in_nav_menus' => false,
-            'publicly_queryable' => true,
-            'show_in_rest' => true,
-            'has_archive' => false,
-        ]);
+        $post_types = $this->getLayoutPostTypes();
+
+        foreach ($post_types as $post_type) {
+            if ($post_type === 'optilarity_layout') {
+                register_post_type('optilarity_layout', [
+                    'labels' => [
+                        'name' => 'Optilarity Layouts',
+                        'singular_name' => 'Optilarity Layout',
+                    ],
+                    'public' => true,
+                    'show_ui' => true,
+                    'capability_type' => 'page',
+                    'hierarchical' => false,
+                    'supports' => ['title', 'editor', 'revisions', 'thumbnail', 'page-attributes'],
+                    'show_in_menu' => 'options-general.php',
+                    'exclude_from_search' => true,
+                    'show_in_nav_menus' => false,
+                    'publicly_queryable' => true,
+                    'show_in_rest' => true,
+                    'has_archive' => false,
+                    'rewrite' => [
+                        'slug' => 'optilarity-layout',
+                        'with_front' => false,
+                    ]
+                ]);
+            } else {
+                add_post_type_support($post_type, 'page-attributes');
+            }
+        }
 
         if (get_option('optilarity_layout_flushed') !== '1') {
             flush_rewrite_rules();
@@ -96,7 +118,9 @@ class FlatsomeExtra
         }
 
         if (function_exists('add_ux_builder_post_type')) {
-            add_ux_builder_post_type('optilarity_layout');
+            foreach ($post_types as $post_type) {
+                add_ux_builder_post_type($post_type);
+            }
         }
     }
 
@@ -184,10 +208,37 @@ class FlatsomeExtra
             }
         }
 
-        if (is_singular('optilarity_layout')) {
-            return dirname(__DIR__) . '/templates/single-layout.php';
+        if (is_singular()) {
+            $post_type = get_post_type();
+            if (in_array($post_type, $this->getLayoutPostTypes())) {
+                $custom_template = get_post_meta(get_the_ID(), '_wp_page_template', true);
+                if ($custom_template && $custom_template !== 'default') {
+                    $located = locate_template($custom_template);
+                    if ($located) {
+                        return $located;
+                    }
+                }
+
+                if ($post_type === 'optilarity_layout') {
+                    return dirname(__DIR__) . '/templates/single-layout.php';
+                }
+            }
         }
 
         return $template;
+    }
+
+    public function registerTemplates()
+    {
+        $post_types = $this->getLayoutPostTypes();
+        foreach ($post_types as $post_type) {
+            add_filter("theme_{$post_type}_templates", [$this, 'filterPostTemplates'], 10, 2);
+        }
+    }
+
+    public function filterPostTemplates($post_templates, $theme)
+    {
+        $page_templates = $theme->get_page_templates();
+        return array_merge($post_templates, $page_templates);
     }
 }
