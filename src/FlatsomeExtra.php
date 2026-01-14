@@ -25,10 +25,11 @@ class FlatsomeExtra
 
         add_action('init', [$this, 'registerPostType']);
 
-        add_filter('template_include', [$this, 'templateInclude']);
+        // add_filter('template_include', [$this, 'templateInclude'], 99);
         add_action('wp_enqueue_scripts', [$this, 'enqueueAssets']);
         add_action('admin_bar_menu', [$this, 'addAdminBarItem'], 100);
         add_action('admin_init', [$this, 'handleLayoutEditRequest']);
+        add_action('delete_post', [$this, 'cleanupLayoutReferences']);
         add_filter('ux_builder_data', [$this, 'filterUxBuilderData'], 999);
 
         $this->initTaxonomyFeaturedThumbnail();
@@ -113,9 +114,9 @@ class FlatsomeExtra
             }
         }
 
-        if (get_option('optilarity_layout_flushed') !== '1') {
+        if (get_option('optilarity_layout_flushed') !== '2') {
             flush_rewrite_rules();
-            update_option('optilarity_layout_flushed', '1');
+            update_option('optilarity_layout_flushed', '2');
         }
 
         if (function_exists('add_ux_builder_post_type')) {
@@ -150,23 +151,65 @@ class FlatsomeExtra
 
     public function addAdminBarItem($wp_admin_bar)
     {
-        if (is_admin() || !is_tax()) {
+        if (is_admin() || !(is_category() || is_tag() || is_tax())) {
             return;
         }
 
         $term = get_queried_object();
-        if (!$term) {
+        if (!$term || !isset($term->taxonomy)) {
             return;
         }
 
-        $wp_admin_bar->add_node([
-            'id' => 'optilarity-edit-layout',
-            'title' => 'Edit layout by Optilarity',
-            'href' => admin_url('term.php?taxonomy=' . $term->taxonomy . '&tag_ID=' . $term->term_id . '&optilarity_edit=1'),
-            'meta' => [
-                'class' => 'optilarity-edit-layout-link',
-            ],
-        ]);
+        $term_layout_id = get_term_meta($term->term_id, '_optilarity_layout_id', true);
+        if ($term_layout_id && !get_post($term_layout_id)) {
+            delete_term_meta($term->term_id, '_optilarity_layout_id');
+            $term_layout_id = false;
+        }
+
+        if ($term_layout_id) {
+            $wp_admin_bar->add_node([
+                'id' => 'optilarity-edit-layout',
+                'title' => 'Edit Layout',
+                'href' => admin_url('post.php?post=' . $term_layout_id . '&action=edit&app=uxbuilder'),
+                'meta' => [
+                    'class' => 'optilarity-edit-layout-link',
+                ],
+            ]);
+
+            $wp_admin_bar->add_node([
+                'id' => 'optilarity-edit-taxonomy-layout',
+                'parent' => 'optilarity-edit-layout',
+                'title' => 'Edit Taxonomy Layout',
+                'href' => admin_url('term.php?taxonomy=' . $term->taxonomy . '&optilarity_edit=1'),
+                'meta' => [
+                    'class' => 'optilarity-edit-taxonomy-layout-link',
+                ],
+            ]);
+        } else {
+            $taxonomy_layout_id = get_option('optilarity_layout_taxonomy_' . $term->taxonomy);
+            if ($taxonomy_layout_id && !get_post($taxonomy_layout_id)) {
+                delete_option('optilarity_layout_taxonomy_' . $term->taxonomy);
+            }
+
+            $wp_admin_bar->add_node([
+                'id' => 'optilarity-edit-layout',
+                'title' => 'Edit Layout',
+                'href' => admin_url('term.php?taxonomy=' . $term->taxonomy . '&optilarity_edit=1'),
+                'meta' => [
+                    'class' => 'optilarity-edit-layout-link',
+                ],
+            ]);
+
+            $wp_admin_bar->add_node([
+                'id' => 'optilarity-edit-term-layout',
+                'parent' => 'optilarity-edit-layout',
+                'title' => 'Edit Term Layout (' . $term->name . ')',
+                'href' => admin_url('term.php?taxonomy=' . $term->taxonomy . '&term_id=' . $term->term_id . '&optilarity_edit=1'),
+                'meta' => [
+                    'class' => 'optilarity-edit-term-layout-link',
+                ],
+            ]);
+        }
     }
 
     public function handleLayoutEditRequest()
@@ -175,24 +218,36 @@ class FlatsomeExtra
             return;
         }
 
-        $term = get_queried_object();
-        if (!$term && isset($_GET['tag_ID']) && isset($_GET['taxonomy'])) {
-            $term = get_term($_GET['tag_ID'], $_GET['taxonomy']);
-        }
-
-        if (!$term instanceof \WP_Term) {
+        if (isset($_GET['taxonomy'])) {
+            $taxonomy = $_GET['taxonomy'];
+        } else {
             return;
         }
 
-        $layout_id = get_term_meta($term->term_id, '_optilarity_layout_id', true);
+        if (isset($_GET['term_id'])) {
+            $term_id = (int) $_GET['term_id'];
+            $layout_id = get_term_meta($term_id, '_optilarity_layout_id', true);
 
-        if (!$layout_id || !get_post($layout_id)) {
-            $layout_id = wp_insert_post([
-                'post_title' => 'Layout for ' . $term->name . ' (' . $term->taxonomy . ')',
-                'post_type' => 'optilarity_layout',
-                'post_status' => 'publish',
-            ]);
-            update_term_meta($term->term_id, '_optilarity_layout_id', $layout_id);
+            if (!$layout_id || !get_post($layout_id)) {
+                $term = get_term($term_id);
+                $layout_id = wp_insert_post([
+                    'post_title' => 'Layout for Term: ' . $term->name,
+                    'post_type' => 'optilarity_layout',
+                    'post_status' => 'publish',
+                ]);
+                update_term_meta($term_id, '_optilarity_layout_id', $layout_id);
+            }
+        } else {
+            $layout_id = get_option('optilarity_layout_taxonomy_' . $taxonomy);
+
+            if (!$layout_id || !get_post($layout_id)) {
+                $layout_id = wp_insert_post([
+                    'post_title' => 'Layout for ' . $taxonomy,
+                    'post_type' => 'optilarity_layout',
+                    'post_status' => 'publish',
+                ]);
+                update_option('optilarity_layout_taxonomy_' . $taxonomy, $layout_id);
+            }
         }
 
         $ux_builder_url = admin_url('post.php?post=' . $layout_id . '&action=edit&app=uxbuilder');
@@ -200,34 +255,56 @@ class FlatsomeExtra
         exit;
     }
 
-    public function templateInclude($template)
+    public function cleanupLayoutReferences($post_id)
     {
-        if (is_tax()) {
-            $term = get_queried_object();
-            if ($term && get_term_meta($term->term_id, '_optilarity_layout_id', true)) {
-                return dirname(__DIR__) . '/templates/generic-layout.php';
+        if (get_post_type($post_id) !== 'optilarity_layout') {
+            return;
+        }
+
+        // Clean up taxonomy level layouts
+        global $wpdb;
+        $taxonomy_options = $wpdb->get_results("SELECT option_name FROM {$wpdb->options} WHERE option_name LIKE 'optilarity_layout_taxonomy_%'");
+        foreach ($taxonomy_options as $option) {
+            if (get_option($option->option_name) == $post_id) {
+                delete_option($option->option_name);
             }
         }
 
-        if (is_singular()) {
-            $post_type = get_post_type();
-            if (in_array($post_type, $this->getLayoutPostTypes())) {
-                $custom_template = get_post_meta(get_the_ID(), '_wp_page_template', true);
-                if ($custom_template && $custom_template !== 'default') {
-                    $located = locate_template($custom_template);
-                    if ($located) {
-                        return $located;
-                    }
-                }
-
-                if ($post_type === 'optilarity_layout') {
-                    return dirname(__DIR__) . '/templates/single-layout.php';
-                }
-            }
-        }
-
-        return $template;
+        // Clean up term level layouts
+        $wpdb->delete($wpdb->termmeta, [
+            'meta_key' => '_optilarity_layout_id',
+            'meta_value' => $post_id
+        ]);
     }
+
+    // public function templateInclude($template)
+    // {
+    //     if (is_category() || is_tag() || is_tax()) {
+    //         $term = get_queried_object();
+    //         if ($term && get_option('optilarity_layout_taxonomy_' . $term->taxonomy)) {
+    //             return dirname(__DIR__) . '/templates/generic-layout.php';
+    //         }
+    //     }
+
+    //     if (is_singular()) {
+    //         $post_type = get_post_type();
+    //         if (in_array($post_type, $this->getLayoutPostTypes())) {
+    //             $custom_template = get_post_meta(get_the_ID(), '_wp_page_template', true);
+    //             if ($custom_template && $custom_template !== 'default') {
+    //                 $located = locate_template($custom_template);
+    //                 if ($located) {
+    //                     return $located;
+    //                 }
+    //             }
+
+    //             if ($post_type === 'optilarity_layout') {
+    //                 return dirname(__DIR__) . '/templates/single-layout.php';
+    //             }
+    //         }
+    //     }
+
+    //     return $template;
+    // }
 
     public function registerTemplates()
     {
