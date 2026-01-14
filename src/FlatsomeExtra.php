@@ -29,6 +29,7 @@ class FlatsomeExtra
         add_action('wp_enqueue_scripts', [$this, 'enqueueAssets']);
         add_action('admin_bar_menu', [$this, 'addAdminBarItem'], 100);
         add_action('admin_init', [$this, 'handleLayoutEditRequest']);
+        add_filter('ux_builder_data', [$this, 'filterUxBuilderData'], 999);
 
         $this->initTaxonomyFeaturedThumbnail();
 
@@ -240,5 +241,74 @@ class FlatsomeExtra
     {
         $page_templates = $theme->get_page_templates();
         return array_merge($post_templates, $page_templates);
+    }
+
+    public function filterUxBuilderData($data)
+    {
+        if (isset($data['post']['id'])) {
+            $post_id = $data['post']['id'];
+        } elseif (isset($_GET['post'])) {
+            $post_id = $_GET['post'];
+        } else {
+            return $data;
+        }
+
+        $post = get_post($post_id);
+        if (!$post || !in_array($post->post_type, $this->getLayoutPostTypes())) {
+            return $data;
+        }
+
+        $templates = wp_get_theme()->get_page_templates($post, $post->post_type);
+        $options = [];
+        $options[] = ['value' => 'default', 'label' => 'Default Template'];
+
+        foreach ($templates as $file => $name) {
+            $options[] = ['value' => $file, 'label' => $name];
+        }
+
+        // Ensure meta is an array to avoid stdClass error
+        if (isset($data['post']['meta']) && is_object($data['post']['meta'])) {
+            $data['post']['meta'] = (array) $data['post']['meta'];
+        }
+
+        if (!isset($data['post']['meta']['options'])) {
+            $data['post']['meta']['options'] = [];
+        }
+
+        // Ensure values is an array
+        if (isset($data['post']['meta']['values']) && is_object($data['post']['meta']['values'])) {
+            $data['post']['meta']['values'] = (array) $data['post']['meta']['values'];
+        } elseif (!isset($data['post']['meta']['values'])) { // Initialize if not set
+            $data['post']['meta']['values'] = [];
+        }
+
+        $current_template = get_post_meta($post->ID, '_wp_page_template', true) ?: 'default';
+        $data['post']['meta']['values']['_wp_page_template'] = $current_template;
+
+        $found = false;
+        foreach ($data['post']['meta']['options'] as &$option) {
+            if (isset($option['$name']) && $option['$name'] === '_wp_page_template') {
+                $option['options'] = $options;
+                $option['value'] = $current_template;
+                $found = true;
+                break;
+            }
+        }
+
+        if (!$found) {
+            $data['post']['meta']['options'][] = [
+                '$name' => '_wp_page_template',
+                '$orgName' => '_wp_page_template',
+                'type' => 'select',
+                'heading' => 'Template',
+                'description' => '',
+                'default' => 'default',
+                'value' => $current_template,
+                'options' => $options,
+                'reload' => true,
+            ];
+        }
+
+        return $data;
     }
 }
