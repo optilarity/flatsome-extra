@@ -105,7 +105,7 @@ class FlatsomeExtra
         wp_enqueue_style(
             'flatsome-extra-styles',
             $this->getAssetUrl('css/optilarity-flatsome-extra.css'),
-            [],
+            ['dashicons'],
             '1.1.0'
         );
 
