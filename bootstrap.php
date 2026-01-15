@@ -18,10 +18,9 @@ class Optilarity_Flatsome_Extra_Bootstrapper
     public function boot()
     {
         if (class_exists(\Optilarity\FlatsomeExtra\FlatsomeExtra::class)) {
-            new \Optilarity\FlatsomeExtra\FlatsomeExtra();
+            \Optilarity\FlatsomeExtra\FlatsomeExtra::getInstance();
         }
     }
 }
 
 $bootstraper = new Optilarity_Flatsome_Extra_Bootstrapper();
-$bootstraper->boot();

@@ -6,11 +6,23 @@ use Optilarity\FlatsomeExtra\Shortcodes\QueriedObjectTitleShortcode;
 use Optilarity\FlatsomeExtra\Shortcodes\TaxonomyDescriptionShortcode;
 use Optilarity\FlatsomeExtra\Shortcodes\PostExcerptShortcode;
 use Optilarity\FlatsomeExtra\Shortcodes\TaxonomyThumbnailShortcode;
-
+use Optilarity\FlatsomeExtra\Shortcodes\ThoughtLeaderMetaShortcode;
 use Optilarity\FlatsomeExtra\Shortcodes\PostViewsShortcode;
 
 class FlatsomeExtra
 {
+
+    protected static $instance;
+    public $original_query_posts = null;
+
+    public static function getInstance()
+    {
+        if (null === self::$instance) {
+            self::$instance = new self();
+        }
+        return self::$instance;
+    }
+
     public function __construct()
     {
         $this->init();
@@ -25,8 +37,10 @@ class FlatsomeExtra
 
         add_action('init', [$this, 'registerPostType']);
 
-        // add_filter('template_include', [$this, 'templateInclude'], 99);
+        add_filter('template_include', [$this, 'templateInclude'], 99);
+        add_filter('the_posts', [$this, 'overrideMainQueryWithLayout'], 10, 2);
         add_action('wp_enqueue_scripts', [$this, 'enqueueAssets']);
+        add_action('ux_builder_enqueue_scripts', [$this, 'enqueueAssets']);
         add_action('admin_bar_menu', [$this, 'addAdminBarItem'], 100);
         add_action('admin_init', [$this, 'handleLayoutEditRequest']);
         add_action('delete_post', [$this, 'cleanupLayoutReferences']);
@@ -44,7 +58,7 @@ class FlatsomeExtra
     {
         $taxonomies = apply_filters(
             'optilarity_featured_thumbnail_taxonomies',
-            ['category', 'post_tag', 'product_cat']
+            ['category', 'post_tag', 'product_cat', 'thought_leader']
         );
         TaxonomyFeaturedThumbnail::getInstance()->register($taxonomies);
     }
@@ -57,6 +71,7 @@ class FlatsomeExtra
             TaxonomyDescriptionShortcode::class,
             PostExcerptShortcode::class,
             TaxonomyThumbnailShortcode::class,
+            ThoughtLeaderMetaShortcode::class,
             PostViewsShortcode::class,
         ];
 
@@ -277,34 +292,130 @@ class FlatsomeExtra
         ]);
     }
 
-    // public function templateInclude($template)
-    // {
-    //     if (is_category() || is_tag() || is_tax()) {
-    //         $term = get_queried_object();
-    //         if ($term && get_option('optilarity_layout_taxonomy_' . $term->taxonomy)) {
-    //             return dirname(__DIR__) . '/templates/generic-layout.php';
-    //         }
-    //     }
+    protected static $layout_cache = [];
 
-    //     if (is_singular()) {
-    //         $post_type = get_post_type();
-    //         if (in_array($post_type, $this->getLayoutPostTypes())) {
-    //             $custom_template = get_post_meta(get_the_ID(), '_wp_page_template', true);
-    //             if ($custom_template && $custom_template !== 'default') {
-    //                 $located = locate_template($custom_template);
-    //                 if ($located) {
-    //                     return $located;
-    //                 }
-    //             }
+    public function getLayoutIdForTerm($term)
+    {
+        if (!$term || !isset($term->taxonomy)) {
+            return false;
+        }
 
-    //             if ($post_type === 'optilarity_layout') {
-    //                 return dirname(__DIR__) . '/templates/single-layout.php';
-    //             }
-    //         }
-    //     }
+        $cache_key = $term->taxonomy . '_' . $term->term_id;
+        if (isset(self::$layout_cache[$cache_key])) {
+            return self::$layout_cache[$cache_key];
+        }
 
-    //     return $template;
-    // }
+        $layout_id = get_term_meta($term->term_id, '_optilarity_layout_id', true);
+        if ($layout_id && get_post($layout_id)) {
+            self::$layout_cache[$cache_key] = $layout_id;
+            return $layout_id;
+        }
+
+        $taxonomy_layout_id = get_option('optilarity_layout_taxonomy_' . $term->taxonomy);
+        if ($taxonomy_layout_id && get_post($taxonomy_layout_id)) {
+            self::$layout_cache[$cache_key] = $taxonomy_layout_id;
+            return $taxonomy_layout_id;
+        }
+
+        self::$layout_cache[$cache_key] = false;
+        return false;
+    }
+
+    public function templateInclude($template)
+    {
+        if (is_category() || is_tag() || is_tax()) {
+            $term = get_queried_object();
+            $layout_id = $this->getLayoutIdForTerm($term);
+
+            if ($layout_id) {
+                $custom_template = get_post_meta($layout_id, '_wp_page_template', true);
+                if ($custom_template && $custom_template !== 'default') {
+                    $located = locate_template($custom_template);
+                    if ($located) {
+                        return $located;
+                    }
+                }
+                return dirname(__DIR__) . '/templates/generic-layout.php';
+            }
+        }
+
+        if (is_singular()) {
+            $post_type = get_post_type();
+            if (in_array($post_type, $this->getLayoutPostTypes())) {
+                $custom_template = get_post_meta(get_the_ID(), '_wp_page_template', true);
+                if ($custom_template && $custom_template !== 'default') {
+                    $located = locate_template($custom_template);
+                    if ($located) {
+                        return $located;
+                    }
+                }
+
+                if ($post_type === 'optilarity_layout') {
+                    // Check if there is a single-layout.php in templates dir
+                    $single_layout = dirname(__DIR__) . '/templates/single-layout.php';
+                    if (file_exists($single_layout)) {
+                        return $single_layout;
+                    }
+                }
+            }
+        }
+
+        return $template;
+    }
+
+    private static $is_overriding_query = false;
+
+    /**
+     * Override the main query posts with the layout post content
+     * This avoids conflicts with the default taxonomy loop.
+     */
+    public function overrideMainQueryWithLayout($posts, \WP_Query $query)
+    {
+        if (self::$is_overriding_query || !$query->is_main_query() || is_admin()) {
+            return $posts;
+        }
+
+        if ($query->is_category() || $query->is_tag() || $query->is_tax()) {
+            self::$is_overriding_query = true;
+
+            $term = $query->get_queried_object();
+            if (!$term || !isset($term->taxonomy)) {
+                // Try manual detection if queried object is not ready
+                if ($query->is_category()) {
+                    $term = get_term_by('slug', $query->get('category_name'), 'category');
+                } elseif ($query->is_tag()) {
+                    $term = get_term_by('slug', $query->get('tag'), 'post_tag');
+                } elseif ($query->is_tax()) {
+                    $taxonomy = $query->get('taxonomy');
+                    $term_slug = $query->get($taxonomy);
+                    $term = get_term_by('slug', $term_slug, $taxonomy);
+                }
+            }
+
+            $layout_id = $this->getLayoutIdForTerm($term);
+
+            if ($layout_id) {
+                $layout_post = get_post($layout_id);
+                if ($layout_post) {
+                    // Only save original posts once
+                    if ($this->original_query_posts === null) {
+                        $this->original_query_posts = $posts;
+                    }
+
+                    // Update query properties to reflect a single post
+                    $query->post_count = 1;
+                    $query->found_posts = 1;
+                    $query->max_num_pages = 0;
+
+                    self::$is_overriding_query = false;
+                    return [$layout_post];
+                }
+            }
+            self::$is_overriding_query = false;
+        }
+
+        return $posts;
+    }
 
     public function registerTemplates()
     {

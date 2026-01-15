@@ -14,6 +14,21 @@ class QueryBuilder
 
             // In frontend archive pages, the global query is what we want.
             if (!is_admin() && !defined('REST_REQUEST')) {
+                // If the main query has been overridden with a layout, return the original posts
+                if (class_exists(\Optilarity\FlatsomeExtra\FlatsomeExtra::class)) {
+                    $extra = \Optilarity\FlatsomeExtra\FlatsomeExtra::getInstance();
+                    if ($extra->original_query_posts !== null) {
+                        $restored_query = new \WP_Query();
+                        $restored_query->query_vars = $wp_query->query_vars; // Copy all vars to avoid Undefined key warnings
+                        $restored_query->posts = $extra->original_query_posts;
+                        $restored_query->post_count = count($restored_query->posts);
+                        $restored_query->is_archive = true;
+                        $restored_query->is_tax = is_tax();
+                        $restored_query->is_category = is_category();
+                        $restored_query->is_tag = is_tag();
+                        return $restored_query;
+                    }
+                }
                 return $wp_query;
             }
 
