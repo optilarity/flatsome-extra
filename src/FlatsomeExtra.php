@@ -11,6 +11,7 @@ use Optilarity\FlatsomeExtra\Shortcodes\PostViewsShortcode;
 
 class FlatsomeExtra
 {
+    const VERSION = '1.1.1';
 
     protected static $instance;
     public $original_query_posts = null;
@@ -87,7 +88,7 @@ class FlatsomeExtra
     public function registerUXBuilderElements()
     {
         if (function_exists('add_ux_builder_shortcode')) {
-            // The elements are already registered via the Shortcode classes, 
+            // The elements are already registered via the Shortcode classes,
             // but we can add more system-wide registration here if needed.
         }
     }
@@ -147,14 +148,14 @@ class FlatsomeExtra
             'flatsome-extra-styles',
             $this->getAssetUrl('css/optilarity-flatsome-extra.css'),
             ['dashicons'],
-            '1.1.0'
+            static::VERSION
         );
 
         wp_enqueue_script(
             'flatsome-extra-scripts',
             $this->getAssetUrl('js/optilarity-flatsome-extra.js'),
             [],
-            '1.1.0',
+            static::VERSION,
             true
         );
     }
