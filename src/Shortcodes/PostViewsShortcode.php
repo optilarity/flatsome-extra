@@ -31,7 +31,7 @@ class PostViewsShortcode extends AbstractShortcode
             'color' => [
                 'type' => 'colorpicker',
                 'heading' => 'Color',
-                'default' => '#0066cc',
+                'default' => '#006EB7',
             ],
             'font_size' => [
                 'type' => 'slider',
@@ -48,7 +48,7 @@ class PostViewsShortcode extends AbstractShortcode
     {
         $atts = shortcode_atts([
             'label' => 'READS',
-            'color' => '#0066cc',
+            'color' => '#006EB7',
             'font_size' => '24',
         ], $atts);
 
