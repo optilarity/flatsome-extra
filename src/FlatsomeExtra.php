@@ -45,7 +45,7 @@ class FlatsomeExtra
         add_action('admin_bar_menu', [$this, 'addAdminBarItem'], 100);
         add_action('admin_init', [$this, 'handleLayoutEditRequest']);
         add_action('delete_post', [$this, 'cleanupLayoutReferences']);
-        add_filter('ux_builder_data', [$this, 'filterUxBuilderData'], 999);
+        add_filter('ux_builder_data', [$this, 'filterUxBuilderData'], 9999999);
 
         $this->initTaxonomyFeaturedThumbnail();
 
@@ -484,6 +484,25 @@ class FlatsomeExtra
             }
         }
 
+
+
+        if (!in_array($data['post']['type'], apply_filters('optilarity/ux_templates/disable/post_types', []))) {
+            // Update UX Builder templates registry to include current post type
+            $registry = ux_builder('templates');
+            $all_templates = $registry->to_array();
+            $current_post_type = $data['post']['type'];
+
+            foreach ($all_templates as $id => $template_data) {
+                if (isset($template_data['post_types']) && is_array($template_data['post_types'])) {
+                    if (!in_array($current_post_type, $template_data['post_types'])) {
+                        $template_data['post_types'][] = $current_post_type;
+                        $registry->set($id, $template_data);
+                    }
+                }
+            }
+        }
+
+
         if (!$found) {
             $data['post']['meta']['options'][] = [
                 '$name' => '_wp_page_template',
@@ -497,6 +516,7 @@ class FlatsomeExtra
                 'reload' => true,
             ];
         }
+        
 
         return $data;
     }
