@@ -11,7 +11,7 @@ use Optilarity\FlatsomeExtra\Shortcodes\PostViewsShortcode;
 
 class FlatsomeExtra
 {
-    const VERSION = '1.1.1';
+    const VERSION = '1.1.2';
 
     protected static $instance;
     public $original_query_posts = null;

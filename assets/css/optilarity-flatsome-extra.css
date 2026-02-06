@@ -281,10 +281,10 @@
 
 .akselos-video-iframe-wrapper {
     position: relative;
-    padding-bottom: 56.25%;
+    padding-bottom: 55.7%;
     /* 16:9 */
     height: 0;
-    background: #000;
+    background: #fff;
     box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5);
     border: 5px solid #fff;
     border-radius: 3px;
